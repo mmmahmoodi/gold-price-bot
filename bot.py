@@ -60,6 +60,7 @@ def calc_bubble_pct(coin_price, intrinsic):
 
 def build_message():
     dollar     = fetch("price_dollar_rl")
+    tether     = fetch("crypto-tether")
     emami      = fetch("sekee")
     gold18     = fetch("geram18")
     gold24     = fetch("geram24")
@@ -97,7 +98,7 @@ def build_message():
     intr_bahar  = intrinsic_from_gold24(BAHAR_GOLD_GR)
     intr_nim    = intrinsic_from_gold24(NIM_GOLD_GR)
     intr_rob    = intrinsic_from_gold24(ROB_GOLD_GR)
-    intr_grami  = intrinsic_abshodeh(ABSHODEH_GOLD_GR)
+   intr_grami  = intrinsic_from_gold24(GRAMI_GOLD_GR)
     intr_abshodeh = intr_grami
 
     hbab_emami  = calc_bubble_pct(emami, intr_emami)
@@ -107,6 +108,7 @@ def build_message():
     hbab_grami  = calc_bubble_pct(grami, intr_grami)
 
     lines = [
+        f"💵 تتر:   {fmt(tether)}",
         f"💰 دلار:   {fmt(dollar)}",
         f"🔸 سکه امامی:   {fmt(emami)}",
         f"🔸 گرم طلای 18:   {fmt(gold18)}",
