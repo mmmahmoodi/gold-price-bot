@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHANNEL_ID = "@nerkh_tahlil"
+CHANNEL_URL = "https://t.me/nerkh_tahlil"
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 BASE = "https://api.tgju.org/v1/market/indicator/summary-table-data/"
@@ -19,6 +20,12 @@ def fetch(symbol):
         r = requests.get(BASE + symbol, headers=HEADERS, timeout=10)
         data = r.json()
         return data["data"][0][1]
+    except:
+        return None
+
+def to_float(val):
+    try:
+        return float(str(val).replace(",", ""))
     except:
         return None
 
@@ -41,11 +48,21 @@ def fa_date():
     day_fa = DAYS_FA.get(now.strftime("%A"), "")
     return f"{day_fa} {jdt.strftime('%d/%m/%Y')} - {jdt.strftime('%H:%M')}"
 
+def calc_bubble_pct(coin_price, intrinsic):
+    try:
+        c = to_float(coin_price)
+        i = to_float(intrinsic)
+        if c and i and i > 0:
+            return ((c - i) / i) * 100
+        return None
+    except:
+        return None
+
 def build_message():
     dollar     = fetch("price_dollar_rl")
     emami      = fetch("sekee")
     gold18     = fetch("geram18")
-    gold24     = fetch("geram-24")
+    gold24     = fetch("geram24")
     abshodeh   = fetch("gold-abshode")
     bahar      = fetch("sekeb")
     nim        = fetch("nim")
@@ -53,23 +70,41 @@ def build_message():
     grami      = fetch("gerami")
     ons_gold   = fetch("ons")
     ons_silver = fetch("silver")
-    hbab_emami = fetch("hbab-sekke-emami")
-    hbab_bahar = fetch("hbab-sekeb")
-    hbab_nim   = fetch("hbab-nim-sekke")
-    hbab_rob   = fetch("hbab-rob-sekke")
-    hbab_grami = fetch("hbab-sekke-grami")
 
-    def calc_no_bubble(price, hbab):
-        try:
-            p = float(str(price).replace(",", ""))
-            h = float(str(hbab).replace(",", "")) / 100
-            return p / (1 + h)
-        except:
-            return None
+    # محاسبه ارزش ذاتی (بدون حباب) بر اساس وزن طلای هر سکه
+    # سکه امامی: 8.133 گرم طلای 22 عیار = 8.133 * (22/24) گرم طلای 24
+    COIN_GOLD_GR = 8.133 * (22 / 24)
+    BAHAR_GOLD_GR = 8.133 * (22 / 24)
+    NIM_GOLD_GR = 4.066 * (22 / 24)
+    ROB_GOLD_GR = 2.033 * (22 / 24)
+    GRAMI_GOLD_GR = 1.0 * (22 / 24)
+    ABSHODEH_GOLD_GR = 1.0
 
-    intrinsic_emami  = calc_no_bubble(emami, hbab_emami)
-    intrinsic_bahar  = calc_no_bubble(bahar, hbab_bahar)
-    intrinsic_abshodeh = calc_no_bubble(abshodeh, hbab_emami)
+    g24 = to_float(gold24)
+    ab  = to_float(abshodeh)
+
+    def intrinsic_from_gold24(weight_gr):
+        if g24 and weight_gr:
+            return g24 * weight_gr
+        return None
+
+    def intrinsic_abshodeh(weight_gr):
+        if ab and weight_gr:
+            return ab * weight_gr
+        return None
+
+    intr_emami  = intrinsic_from_gold24(COIN_GOLD_GR)
+    intr_bahar  = intrinsic_from_gold24(BAHAR_GOLD_GR)
+    intr_nim    = intrinsic_from_gold24(NIM_GOLD_GR)
+    intr_rob    = intrinsic_from_gold24(ROB_GOLD_GR)
+    intr_grami  = intrinsic_abshodeh(ABSHODEH_GOLD_GR)
+    intr_abshodeh = intr_grami
+
+    hbab_emami  = calc_bubble_pct(emami, intr_emami)
+    hbab_bahar  = calc_bubble_pct(bahar, intr_bahar)
+    hbab_nim    = calc_bubble_pct(nim, intr_nim)
+    hbab_rob    = calc_bubble_pct(rob, intr_rob)
+    hbab_grami  = calc_bubble_pct(grami, intr_grami)
 
     lines = [
         f"💰 دلار:   {fmt(dollar)}",
@@ -90,11 +125,13 @@ def build_message():
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
         f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
         "",
-        f"🔸 ارزش آبشده بدون حباب:   {fmt(intrinsic_abshodeh)}",
-        f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intrinsic_emami)}",
-        f"🔸 ارزش سکه بهار آزادی بدون حباب:   {fmt(intrinsic_bahar)}",
+        f"🔸 ارزش آبشده بدون حباب:   {fmt(intr_abshodeh)}",
+        f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
+        f"🔸 ارزش سکه بهار آزادی بدون حباب:   {fmt(intr_bahar)}",
         "",
-        fa_date()
+        fa_date(),
+        "",
+        CHANNEL_URL
     ]
     return "\n".join(lines)
 
