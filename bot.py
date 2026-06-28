@@ -29,16 +29,15 @@ def fetch(symbol):
 
 def fetch_tether():
     try:
-        r = requests.get(
-            "https://api.nobitex.ir/v2/orderbook/USDTIRT",
+        r = requests.post(
+            "https://api.nobitex.ir/market/stats",
+            data={"srcCurrency": "usdt", "dstCurrency": "rls"},
             headers={"User-Agent": "Mozilla/5.0"},
             timeout=10
         )
         data = r.json()
-        best_ask = data["asks"][0][0]
-        best_bid = data["bids"][0][0]
-        mid = (float(best_ask) + float(best_bid)) / 2
-        return str(int(mid / 10))
+        price = data["stats"]["usdt-rls"]["latest"]
+        return str(int(float(price) / 10))
     except:
         return None
 
