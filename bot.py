@@ -7,7 +7,11 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHANNEL_ID = "@nerkh_tahlil"
 CHANNEL_URL = "https://t.me/nerkh_tahlil"
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache"
+}
 BASE = "https://api.tgju.org/v1/market/indicator/summary-table-data/"
 
 DAYS_FA = {
@@ -20,6 +24,21 @@ def fetch(symbol):
         r = requests.get(BASE + symbol, headers=HEADERS, timeout=10)
         data = r.json()
         return data["data"][0][1]
+    except:
+        return None
+
+def fetch_tether():
+    try:
+        r = requests.get(
+            "https://api.nobitex.ir/v2/orderbook/USDTIRT",
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=10
+        )
+        data = r.json()
+        best_ask = data["asks"][0][0]
+        best_bid = data["bids"][0][0]
+        mid = (float(best_ask) + float(best_bid)) / 2
+        return str(int(mid / 10))
     except:
         return None
 
@@ -59,8 +78,8 @@ def calc_bubble_pct(coin_price, intrinsic):
         return None
 
 def build_message():
+    tether     = fetch_tether()
     dollar     = fetch("price_dollar_rl")
-    tether     = fetch("crypto-tether")
     emami      = fetch("sekee")
     gold18     = fetch("geram18")
     gold24     = fetch("geram24")
@@ -72,34 +91,24 @@ def build_message():
     ons_gold   = fetch("ons")
     ons_silver = fetch("silver")
 
-    # محاسبه ارزش ذاتی (بدون حباب) بر اساس وزن طلای هر سکه
-    # سکه امامی: 8.133 گرم طلای 22 عیار = 8.133 * (22/24) گرم طلای 24
-    COIN_GOLD_GR = 8.133 * (22 / 24)
+    COIN_GOLD_GR  = 8.133 * (22 / 24)
     BAHAR_GOLD_GR = 8.133 * (22 / 24)
-    NIM_GOLD_GR = 4.066 * (22 / 24)
-    ROB_GOLD_GR = 2.033 * (22 / 24)
+    NIM_GOLD_GR   = 4.066 * (22 / 24)
+    ROB_GOLD_GR   = 2.033 * (22 / 24)
     GRAMI_GOLD_GR = 1.0 * (22 / 24)
-    ABSHODEH_GOLD_GR = 1.0
 
     g24 = to_float(gold24)
-    ab  = to_float(abshodeh)
 
-    def intrinsic_from_gold24(weight_gr):
+    def intr(weight_gr):
         if g24 and weight_gr:
             return g24 * weight_gr
         return None
 
-    def intrinsic_abshodeh(weight_gr):
-        if ab and weight_gr:
-            return ab * weight_gr
-        return None
-
-    intr_emami  = intrinsic_from_gold24(COIN_GOLD_GR)
-    intr_bahar  = intrinsic_from_gold24(BAHAR_GOLD_GR)
-    intr_nim    = intrinsic_from_gold24(NIM_GOLD_GR)
-    intr_rob    = intrinsic_from_gold24(ROB_GOLD_GR)
-    intr_grami  = intrinsic_from_gold24(GRAMI_GOLD_GR)
-    intr_abshodeh = abshodeh
+    intr_emami  = intr(COIN_GOLD_GR)
+    intr_bahar  = intr(BAHAR_GOLD_GR)
+    intr_nim    = intr(NIM_GOLD_GR)
+    intr_rob    = intr(ROB_GOLD_GR)
+    intr_grami  = intr(GRAMI_GOLD_GR)
 
     hbab_emami  = calc_bubble_pct(emami, intr_emami)
     hbab_bahar  = calc_bubble_pct(bahar, intr_bahar)
@@ -127,7 +136,7 @@ def build_message():
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
         f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
         "",
-        f"🔸 ارزش آبشده بدون حباب:   {fmt(intr_abshodeh)}",
+        f"🔸 ارزش آبشده بدون حباب:   {fmt(abshodeh)}",
         f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
         f"🔸 ارزش سکه بهار آزادی بدون حباب:   {fmt(intr_bahar)}",
         "",
