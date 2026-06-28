@@ -63,7 +63,7 @@ def build_message():
     emami      = fetch("sekee")
     gold18     = fetch("geram18")
     gold24     = fetch("geram24")
-    abshodeh   = fetch("gold-abshode")
+    abshodeh   = fetch("gold_melted_transfer")
     bahar      = fetch("sekeb")
     nim        = fetch("nim")
     rob        = fetch("rob")
