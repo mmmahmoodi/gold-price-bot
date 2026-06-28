@@ -98,8 +98,8 @@ def build_message():
     intr_bahar  = intrinsic_from_gold24(BAHAR_GOLD_GR)
     intr_nim    = intrinsic_from_gold24(NIM_GOLD_GR)
     intr_rob    = intrinsic_from_gold24(ROB_GOLD_GR)
-   intr_grami  = intrinsic_from_gold24(GRAMI_GOLD_GR)
-    intr_abshodeh = intr_grami
+    intr_grami  = intrinsic_from_gold24(GRAMI_GOLD_GR)
+    intr_abshodeh = abshodeh
 
     hbab_emami  = calc_bubble_pct(emami, intr_emami)
     hbab_bahar  = calc_bubble_pct(bahar, intr_bahar)
