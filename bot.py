@@ -38,58 +38,38 @@ def fmt(val, bubble=False, decimal=False):
 def fa_date():
     now = datetime.now(timezone(timedelta(hours=3, minutes=30)))
     jdt = jdatetime.datetime.fromgregorian(datetime=now)
-    day_en = now.strftime("%A")
-    day_fa = DAYS_FA.get(day_en, day_en)
+    day_fa = DAYS_FA.get(now.strftime("%A"), "")
     return f"{day_fa} {jdt.strftime('%d/%m/%Y')} - {jdt.strftime('%H:%M')}"
 
 def build_message():
-    dollar    = fetch("price_dollar_rl")
-    emami     = fetch("sekee")
-    gold18    = fetch("geram-18")
-    gold24    = fetch("geram-24")
-    abshodeh  = fetch("gold-abshode")
-    bahar     = fetch("sekeb")
-    nim       = fetch("nim-sekke")
-    rob       = fetch("rob-sekke")
-    grami     = fetch("sekke-gram-1")
-    ons_gold  = fetch("ons")
-    ons_silver= fetch("silver")
-
+    dollar     = fetch("price_dollar_rl")
+    emami      = fetch("sekee")
+    gold18     = fetch("geram18")
+    gold24     = fetch("geram-24")
+    abshodeh   = fetch("gold-abshode")
+    bahar      = fetch("sekeb")
+    nim        = fetch("nim")
+    rob        = fetch("rob")
+    grami      = fetch("gerami")
+    ons_gold   = fetch("ons")
+    ons_silver = fetch("silver")
     hbab_emami = fetch("hbab-sekke-emami")
     hbab_bahar = fetch("hbab-sekeb")
     hbab_nim   = fetch("hbab-nim-sekke")
     hbab_rob   = fetch("hbab-rob-sekke")
-    hbab_grami = fetch("hbab-sekke-gram-1")
+    hbab_grami = fetch("hbab-sekke-grami")
 
-    intrinsic_emami = None
-    intrinsic_bahar = None
-    if abshodeh and hbab_emami:
+    def calc_no_bubble(price, hbab):
         try:
-            ab = float(str(abshodeh).replace(",", ""))
-            hb = float(str(hbab_emami).replace(",", "")) / 100
-            em = float(str(emami).replace(",", "")) if emami else None
-            if em:
-                intrinsic_emami = em / (1 + hb)
+            p = float(str(price).replace(",", ""))
+            h = float(str(hbab).replace(",", "")) / 100
+            return p / (1 + h)
         except:
-            pass
-    if abshodeh and hbab_bahar:
-        try:
-            ab = float(str(abshodeh).replace(",", ""))
-            hb = float(str(hbab_bahar).replace(",", "")) / 100
-            bh = float(str(bahar).replace(",", "")) if bahar else None
-            if bh:
-                intrinsic_bahar = bh / (1 + hb)
-        except:
-            pass
+            return None
 
-    abshodeh_intrinsic = None
-    if abshodeh and hbab_emami:
-        try:
-            ab = float(str(abshodeh).replace(",", ""))
-            hb = float(str(hbab_emami).replace(",", "")) / 100
-            abshodeh_intrinsic = ab
-        except:
-            pass
+    intrinsic_emami  = calc_no_bubble(emami, hbab_emami)
+    intrinsic_bahar  = calc_no_bubble(bahar, hbab_bahar)
+    intrinsic_abshodeh = calc_no_bubble(abshodeh, hbab_emami)
 
     lines = [
         f"💰 دلار:   {fmt(dollar)}",
@@ -110,7 +90,7 @@ def build_message():
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
         f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
         "",
-        f"🔸 ارزش آبشده بدون حباب:   {fmt(abshodeh)}",
+        f"🔸 ارزش آبشده بدون حباب:   {fmt(intrinsic_abshodeh)}",
         f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intrinsic_emami)}",
         f"🔸 ارزش سکه بهار آزادی بدون حباب:   {fmt(intrinsic_bahar)}",
         "",
