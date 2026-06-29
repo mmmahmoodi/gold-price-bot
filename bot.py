@@ -39,46 +39,47 @@ SYMBOLS = {
     "ons_gold": "XAUUSD"
 }
 
+# ثابت‌های محاسباتی
+MESGHAL_GR = 4.608          # وزن یک مثقال به گرم
+OUNCES_GR = 31.1035         # وزن یک انس تروا به گرم
+ABSHODEH_PURITY = 705       # عیار استاندارد آبشده
+PURE_GOLD_PURITY = 999.9    # عیار طلای خالص
+
+# وزن طلای خالص سکه‌ها
+COIN_GOLD_GR  = 8.133 * (22 / 24)
+BAHAR_GOLD_GR = 8.133 * (22 / 24)
+NIM_GOLD_GR   = 4.066 * (22 / 24)
+ROB_GOLD_GR   = 2.033 * (22 / 24)
+GRAMI_GOLD_GR = 1.0 * (22 / 24)
+
 def fetch_with_retry(url, params=None, max_retries=3, delay=2):
-    """درخواست با مکانیزم retry"""
     for attempt in range(max_retries):
         try:
-            print(f"🔄 Attempt {attempt + 1}/{max_retries}...")
             r = requests.get(url, params=params, headers=HEADERS, timeout=20)
             r.raise_for_status()
             return r
         except Exception as e:
             print(f"⚠️ Attempt {attempt + 1} failed: {type(e).__name__}")
             if attempt < max_retries - 1:
-                print(f"⏳ Waiting {delay} seconds...")
                 time.sleep(delay)
-                delay *= 2  # افزایش زمان انتظار
+                delay *= 2
             else:
                 raise e
     return None
 
 def fetch_all_prices():
     try:
-        print(f"🔑 API Key exists: {bool(BRS_API_KEY)}")
-        print(f"📡 Connecting to BrsApi...")
-        
         params = {"key": BRS_API_KEY}
         r = fetch_with_retry(BRS_API_URL, params=params)
-        
-        print(f"📊 Status Code: {r.status_code}")
-        
         data = r.json()
         
         if not data.get("successful", True):
-            print(f"❌ API Error: {data.get('message_error', 'Unknown')}")
             return {}
         
         all_items = []
         all_items.extend(data.get("gold", []))
         all_items.extend(data.get("currency", []))
         all_items.extend(data.get("cryptocurrency", []))
-        
-        print(f"✅ Received {len(all_items)} items")
         
         prices = {}
         for item in all_items:
@@ -89,18 +90,19 @@ def fetch_all_prices():
         return prices
     
     except Exception as e:
-        print(f"❌ Error: {type(e).__name__}: {e}")
+        print(f"❌ Error: {e}")
         return {}
 
 def fetch_silver_ounce():
-    """دریافت انس نقره از TGJU"""
     try:
-        url = "https://api.tgju.org/v1/market/indicator/summary-table-data/silver"
+        url = "https://api.metals.live/v1/spot/silver"
         r = requests.get(url, headers=HEADERS, timeout=15)
         data = r.json()
-        return data["data"][0][1]
+        if data and len(data) > 0:
+            return data[0].get("price")
+        return None
     except Exception as e:
-        print(f"⚠️ Silver fetch error: {e}")
+        print(f"️ Silver error: {e}")
         return None
 
 def get_price(prices, key):
@@ -140,12 +142,33 @@ def fa_date():
     day_fa = DAYS_FA.get(now.strftime("%A"), "")
     return f"{day_fa} {jdt.strftime('%d/%m/%Y')} - {jdt.strftime('%H:%M')}"
 
-def calc_bubble_pct(coin_price, intrinsic):
+def calc_bubble_pct(market_price, intrinsic_value):
     try:
-        c = to_float(coin_price)
-        i = to_float(intrinsic)
-        if c and i and i > 0:
-            return ((c - i) / i) * 100
+        m = to_float(market_price)
+        i = to_float(intrinsic_value)
+        if m and i and i > 0:
+            return ((m - i) / i) * 100
+        return None
+    except:
+        return None
+
+def calc_abshodeh_intrinsic(ons_gold_price, dollar_price):
+    try:
+        ons = to_float(ons_gold_price)
+        usd = to_float(dollar_price)
+        if ons and usd:
+            gold_24k_per_gram = (ons * usd) / OUNCES_GR
+            intrinsic = gold_24k_per_gram * MESGHAL_GR * (ABSHODEH_PURITY / PURE_GOLD_PURITY)
+            return intrinsic
+        return None
+    except:
+        return None
+
+def calc_coin_intrinsic(gold_24k_per_gram, weight_gr):
+    try:
+        g24 = to_float(gold_24k_per_gram)
+        if g24 and weight_gr:
+            return g24 * weight_gr
         return None
     except:
         return None
@@ -173,41 +196,30 @@ def build_message():
     chg_emami  = get_change(prices, "emami")
     chg_gold18 = get_change(prices, "gold18")
     
-    COIN_GOLD_GR  = 8.133 * (22 / 24)
-    BAHAR_GOLD_GR = 8.133 * (22 / 24)
-    NIM_GOLD_GR   = 4.066 * (22 / 24)
-    ROB_GOLD_GR   = 2.033 * (22 / 24)
-    GRAMI_GOLD_GR = 1.0 * (22 / 24)
-
-    g24 = to_float(gold24)
-
-    def intr(weight_gr):
-        if g24 and weight_gr:
-            return g24 * weight_gr
-        return None
-
-    intr_emami  = intr(COIN_GOLD_GR)
-    intr_bahar  = intr(BAHAR_GOLD_GR)
-    intr_nim    = intr(NIM_GOLD_GR)
-    intr_rob    = intr(ROB_GOLD_GR)
-    intr_grami  = intr(GRAMI_GOLD_GR)
-
-    hbab_emami  = calc_bubble_pct(emami, intr_emami)
-    hbab_bahar  = calc_bubble_pct(bahar, intr_bahar)
-    hbab_nim    = calc_bubble_pct(nim, intr_nim)
-    hbab_rob    = calc_bubble_pct(rob, intr_rob)
-    hbab_grami  = calc_bubble_pct(grami, intr_grami)
-
+    intr_emami  = calc_coin_intrinsic(gold24, COIN_GOLD_GR)
+    intr_bahar  = calc_coin_intrinsic(gold24, BAHAR_GOLD_GR)
+    intr_nim    = calc_coin_intrinsic(gold24, NIM_GOLD_GR)
+    intr_rob    = calc_coin_intrinsic(gold24, ROB_GOLD_GR)
+    intr_grami  = calc_coin_intrinsic(gold24, GRAMI_GOLD_GR)
+    intr_abshodeh = calc_abshodeh_intrinsic(ons_gold, dollar)
+    
+    hbab_emami    = calc_bubble_pct(emami, intr_emami)
+    hbab_bahar    = calc_bubble_pct(bahar, intr_bahar)
+    hbab_nim      = calc_bubble_pct(nim, intr_nim)
+    hbab_rob      = calc_bubble_pct(rob, intr_rob)
+    hbab_grami    = calc_bubble_pct(grami, intr_grami)
+    hbab_abshodeh = calc_bubble_pct(abshodeh, intr_abshodeh)
+    
     lines = [
         f"💵 تتر:   {fmt(tether)}",
         f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
         f"🔸 سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}",
         f"🔸 گرم طلای 18:   {fmt(gold18)} {fmt(chg_gold18, change=True)}",
         f"🔸 گرم طلای 24:   {fmt(gold24)}",
-        f"🔸 آبشده:   {fmt(abshodeh)}",
+        f"🔸 آبشده (مثقال):   {fmt(abshodeh)}",
         f"🔸 سکه بهار آزادی:   {fmt(bahar)}",
         f"🔸 نیم سکه:   {fmt(nim)}",
-        f"🔸 ربع سکه:   {fmt(rob)}",
+        f" ربع سکه:   {fmt(rob)}",
         f"🔸 سکه گرمی:   {fmt(grami)}",
         f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)}",
         f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
@@ -217,10 +229,10 @@ def build_message():
         f"🔹 حباب نیم سکه:   {fmt(hbab_nim, bubble=True)}",
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
         f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
+        f"🔹 حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
         "",
-        f"🔸 ارزش آبشده بدون حباب:   {fmt(abshodeh)}",
-        f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
-        f"🔸 ارزش سکه بهار آزادی بدون حباب:   {fmt(intr_bahar)}",
+        f"🔸 ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
+        f" ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
         "",
         fa_date(),
         "",
