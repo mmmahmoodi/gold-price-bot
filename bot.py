@@ -1,6 +1,7 @@
 import requests
 import os
 import jdatetime
+import time
 from datetime import datetime, timezone, timedelta
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
@@ -11,7 +12,12 @@ BRS_API_KEY = os.environ.get("BRS_API_KEY")
 BRS_API_URL = "https://Api.BrsApi.ir/Market/Gold_Currency.php"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9,fa;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1"
 }
 
 DAYS_FA = {
@@ -33,17 +39,46 @@ SYMBOLS = {
     "ons_gold": "XAUUSD"
 }
 
+def fetch_with_retry(url, params=None, max_retries=3, delay=2):
+    """درخواست با مکانیزم retry"""
+    for attempt in range(max_retries):
+        try:
+            print(f"🔄 Attempt {attempt + 1}/{max_retries}...")
+            r = requests.get(url, params=params, headers=HEADERS, timeout=20)
+            r.raise_for_status()
+            return r
+        except Exception as e:
+            print(f"⚠️ Attempt {attempt + 1} failed: {type(e).__name__}")
+            if attempt < max_retries - 1:
+                print(f"⏳ Waiting {delay} seconds...")
+                time.sleep(delay)
+                delay *= 2  # افزایش زمان انتظار
+            else:
+                raise e
+    return None
+
 def fetch_all_prices():
     try:
+        print(f"🔑 API Key exists: {bool(BRS_API_KEY)}")
+        print(f"📡 Connecting to BrsApi...")
+        
         params = {"key": BRS_API_KEY}
-        r = requests.get(BRS_API_URL, params=params, timeout=15)
-        r.raise_for_status()
+        r = fetch_with_retry(BRS_API_URL, params=params)
+        
+        print(f"📊 Status Code: {r.status_code}")
+        
         data = r.json()
+        
+        if not data.get("successful", True):
+            print(f"❌ API Error: {data.get('message_error', 'Unknown')}")
+            return {}
         
         all_items = []
         all_items.extend(data.get("gold", []))
         all_items.extend(data.get("currency", []))
         all_items.extend(data.get("cryptocurrency", []))
+        
+        print(f"✅ Received {len(all_items)} items")
         
         prices = {}
         for item in all_items:
@@ -54,17 +89,18 @@ def fetch_all_prices():
         return prices
     
     except Exception as e:
-        print(f"Error fetching from BrsApi: {e}")
+        print(f"❌ Error: {type(e).__name__}: {e}")
         return {}
 
 def fetch_silver_ounce():
     """دریافت انس نقره از TGJU"""
     try:
         url = "https://api.tgju.org/v1/market/indicator/summary-table-data/silver"
-        r = requests.get(url, headers=HEADERS, timeout=10)
+        r = requests.get(url, headers=HEADERS, timeout=15)
         data = r.json()
         return data["data"][0][1]
-    except:
+    except Exception as e:
+        print(f"⚠️ Silver fetch error: {e}")
         return None
 
 def get_price(prices, key):
@@ -74,7 +110,6 @@ def get_price(prices, key):
     return prices[symbol].get("price")
 
 def get_change(prices, key):
-    """دریافت درصد تغییرات"""
     symbol = SYMBOLS.get(key)
     if not symbol or symbol not in prices:
         return None
@@ -134,7 +169,6 @@ def build_message():
     grami      = get_price(prices, "grami")
     ons_gold   = get_price(prices, "ons_gold")
     
-    # درصد تغییرات
     chg_dollar = get_change(prices, "dollar")
     chg_emami  = get_change(prices, "emami")
     chg_gold18 = get_change(prices, "gold18")
