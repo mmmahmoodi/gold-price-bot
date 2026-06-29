@@ -39,13 +39,11 @@ SYMBOLS = {
     "ons_gold": "XAUUSD"
 }
 
-# ثابت‌های محاسباتی
 MESGHAL_GR = 4.608
 OUNCES_GR = 31.1035
 ABSHODEH_PURITY = 705
 PURE_GOLD_PURITY = 999.9
 
-# وزن طلای خالص سکه‌ها
 COIN_GOLD_GR  = 8.133 * (22 / 24)
 BAHAR_GOLD_GR = 8.133 * (22 / 24)
 NIM_GOLD_GR   = 4.066 * (22 / 24)
@@ -94,17 +92,48 @@ def fetch_all_prices():
         return {}
 
 def fetch_silver_ounce():
-    """دریافت انس نقره از goldprice.org"""
+    """دریافت انس نقره با چند API fallback"""
+    
+    # روش 1: Swissquote Forex Feed
     try:
-        url = "https://data-asg.goldprice.org/dbXRates/USD"
+        url = "https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAG/USD"
         r = requests.get(url, headers=HEADERS, timeout=15)
         data = r.json()
-        if data and "items" in data and len(data["items"]) > 0:
-            return data["items"][0].get("xagPrice")
-        return None
+        if data and len(data) > 0:
+            price = data[0].get("spreadProfilePrices", [{}])[0].get("bid")
+            if price:
+                print(f"✅ Silver from Swissquote: {price}")
+                return price
     except Exception as e:
-        print(f"⚠️ Silver error: {e}")
-        return None
+        print(f"⚠️ Swissquote error: {e}")
+    
+    # روش 2: Currency API از CDN
+    try:
+        url = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xag.json"
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        data = r.json()
+        usd_per_xag = data.get("xag", {}).get("usd")
+        if usd_per_xag:
+            print(f"✅ Silver from CDN: {usd_per_xag}")
+            return usd_per_xag
+    except Exception as e:
+        print(f"⚠️ CDN error: {e}")
+    
+    # روش 3: open.er-api.com
+    try:
+        url = "https://open.er-api.com/v6/latest/XAG"
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        data = r.json()
+        if data.get("result") == "success":
+            price = data.get("rates", {}).get("USD")
+            if price:
+                print(f"✅ Silver from er-api: {price}")
+                return price
+    except Exception as e:
+        print(f"⚠️ er-api error: {e}")
+    
+    print("❌ All silver APIs failed")
+    return None
 
 def get_price(prices, key):
     symbol = SYMBOLS.get(key)
