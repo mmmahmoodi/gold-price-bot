@@ -1,38 +1,38 @@
-name: Gold Price Bot
+name: Run Price Bot
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    # شنبه تا پنجشنبه: هر 5 دقیقه از 8 صبح تا 11 شب
+    - cron: '*/5 4-17 * * 0-5'
+  
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run bot
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          BRS_API_KEY: ${{ secrets.BRS_API_KEY }}
-        run: python bot.py
-
-      - name: Keep alive
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          echo "$(date -u)" > .last_run
-          git add .last_run
-          git diff --staged --quiet || git commit -m "keep alive [skip ci]"
-          git push
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    
+    - name: Run bot
+      env:
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        BRS_API_KEY: ${{ secrets.BRS_API_KEY }}
+      run: python bot.py
+    
+    - name: Keep alive
+      run: |
+        git config user.name "github-actions"
+        git config user.email "actions@github.com"
+        echo "$(date -u)" > .last_run
+        git add .last_run
+        git diff --staged --quiet || git commit -m "keep alive [skip ci]"
+        git push
