@@ -2,10 +2,12 @@ name: Run Price Bot
 
 on:
   schedule:
-    # شنبه تا پنجشنبه: هر 5 دقیقه از 8 صبح تا 11 شب
-    - cron: '*/5 4-17 * * 0-5'
+    # شنبه تا پنجشنبه: هر 5 دقیقه از 8 صبح تا 11 شب (به وقت ایران)
+    # 8:00 ایران = 4:30 UTC | 23:00 ایران = 19:30 UTC
+    # GitHub: 0=یکشنبه، 6=شنبه | پس 0-4,6 = یکشنبه تا پنجشنبه + شنبه
+    - cron: '*/5 4-19 * * 0-4,6'
   
-  workflow_dispatch:
+  workflow_dispatch:  # اجرای دستی
 
 jobs:
   run-bot:
@@ -27,12 +29,3 @@ jobs:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         BRS_API_KEY: ${{ secrets.BRS_API_KEY }}
       run: python bot.py
-    
-    - name: Keep alive
-      run: |
-        git config user.name "github-actions"
-        git config user.email "actions@github.com"
-        echo "$(date -u)" > .last_run
-        git add .last_run
-        git diff --staged --quiet || git commit -m "keep alive [skip ci]"
-        git push
