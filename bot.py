@@ -7,39 +7,78 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHANNEL_ID = "@nerkh_tahlil"
 CHANNEL_URL = "https://t.me/nerkh_tahlil"
 
+BRS_API_KEY = os.environ.get("BRS_API_KEY")
+BRS_API_URL = "https://Api.BrsApi.ir/Market/Gold_Currency.php"
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Cache-Control": "no-cache",
-    "Pragma": "no-cache"
 }
-BASE = "https://api.tgju.org/v1/market/indicator/summary-table-data/"
 
 DAYS_FA = {
     "Saturday": "شنبه", "Sunday": "یکشنبه", "Monday": "دوشنبه",
     "Tuesday": "سه‌شنبه", "Wednesday": "چهارشنبه", "Thursday": "پنجشنبه", "Friday": "جمعه"
 }
 
-def fetch(symbol):
+SYMBOLS = {
+    "dollar": "USD",
+    "tether": "USDT_IRT",
+    "emami": "IR_COIN_EMAMI",
+    "bahar": "IR_COIN_BAHAR",
+    "nim": "IR_COIN_HALF",
+    "rob": "IR_COIN_QUARTER",
+    "grami": "IR_COIN_1G",
+    "gold18": "IR_GOLD_18K",
+    "gold24": "IR_GOLD_24K",
+    "abshodeh": "IR_GOLD_MELTED",
+    "ons_gold": "XAUUSD"
+}
+
+def fetch_all_prices():
     try:
-        r = requests.get(BASE + symbol, headers=HEADERS, timeout=10)
+        params = {"key": BRS_API_KEY}
+        r = requests.get(BRS_API_URL, params=params, timeout=15)
+        r.raise_for_status()
+        data = r.json()
+        
+        all_items = []
+        all_items.extend(data.get("gold", []))
+        all_items.extend(data.get("currency", []))
+        all_items.extend(data.get("cryptocurrency", []))
+        
+        prices = {}
+        for item in all_items:
+            symbol = item.get("symbol")
+            if symbol:
+                prices[symbol] = item
+        
+        return prices
+    
+    except Exception as e:
+        print(f"Error fetching from BrsApi: {e}")
+        return {}
+
+def fetch_silver_ounce():
+    """دریافت انس نقره از TGJU"""
+    try:
+        url = "https://api.tgju.org/v1/market/indicator/summary-table-data/silver"
+        r = requests.get(url, headers=HEADERS, timeout=10)
         data = r.json()
         return data["data"][0][1]
     except:
         return None
 
-def fetch_tether():
-    try:
-        r = requests.post(
-            "https://api.nobitex.ir/market/stats",
-            data={"srcCurrency": "usdt", "dstCurrency": "rls"},
-            headers={"User-Agent": "Mozilla/5.0"},
-            timeout=10
-        )
-        data = r.json()
-        price = data["stats"]["usdt-rls"]["latest"]
-        return str(int(float(price) / 10))
-    except:
+def get_price(prices, key):
+    symbol = SYMBOLS.get(key)
+    if not symbol or symbol not in prices:
         return None
+    return prices[symbol].get("price")
+
+def get_change(prices, key):
+    """دریافت درصد تغییرات"""
+    symbol = SYMBOLS.get(key)
+    if not symbol or symbol not in prices:
+        return None
+    return prices[symbol].get("change_percent")
 
 def to_float(val):
     try:
@@ -47,12 +86,12 @@ def to_float(val):
     except:
         return None
 
-def fmt(val, bubble=False, decimal=False):
+def fmt(val, bubble=False, decimal=False, change=False):
     if val is None:
         return "---"
     try:
         v = float(str(val).replace(",", ""))
-        if bubble:
+        if bubble or change:
             return f"{v:+.2f}%"
         if decimal:
             return f"{v:,.2f}"
@@ -77,19 +116,29 @@ def calc_bubble_pct(coin_price, intrinsic):
         return None
 
 def build_message():
-    tether     = fetch_tether()
-    dollar     = fetch("price_dollar_rl")
-    emami      = fetch("sekee")
-    gold18     = fetch("geram18")
-    gold24     = fetch("geram24")
-    abshodeh   = fetch("gold_melted_transfer")
-    bahar      = fetch("sekeb")
-    nim        = fetch("nim")
-    rob        = fetch("rob")
-    grami      = fetch("gerami")
-    ons_gold   = fetch("ons")
-    ons_silver = fetch("silver")
-
+    prices = fetch_all_prices()
+    silver_oz = fetch_silver_ounce()
+    
+    if not prices:
+        return "❌ خطا در دریافت اطلاعات از سرور."
+    
+    tether     = get_price(prices, "tether")
+    dollar     = get_price(prices, "dollar")
+    emami      = get_price(prices, "emami")
+    gold18     = get_price(prices, "gold18")
+    gold24     = get_price(prices, "gold24")
+    abshodeh   = get_price(prices, "abshodeh")
+    bahar      = get_price(prices, "bahar")
+    nim        = get_price(prices, "nim")
+    rob        = get_price(prices, "rob")
+    grami      = get_price(prices, "grami")
+    ons_gold   = get_price(prices, "ons_gold")
+    
+    # درصد تغییرات
+    chg_dollar = get_change(prices, "dollar")
+    chg_emami  = get_change(prices, "emami")
+    chg_gold18 = get_change(prices, "gold18")
+    
     COIN_GOLD_GR  = 8.133 * (22 / 24)
     BAHAR_GOLD_GR = 8.133 * (22 / 24)
     NIM_GOLD_GR   = 4.066 * (22 / 24)
@@ -117,9 +166,9 @@ def build_message():
 
     lines = [
         f"💵 تتر:   {fmt(tether)}",
-        f"💰 دلار:   {fmt(dollar)}",
-        f"🔸 سکه امامی:   {fmt(emami)}",
-        f"🔸 گرم طلای 18:   {fmt(gold18)}",
+        f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
+        f"🔸 سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}",
+        f"🔸 گرم طلای 18:   {fmt(gold18)} {fmt(chg_gold18, change=True)}",
         f"🔸 گرم طلای 24:   {fmt(gold24)}",
         f"🔸 آبشده:   {fmt(abshodeh)}",
         f"🔸 سکه بهار آزادی:   {fmt(bahar)}",
@@ -127,7 +176,7 @@ def build_message():
         f"🔸 ربع سکه:   {fmt(rob)}",
         f"🔸 سکه گرمی:   {fmt(grami)}",
         f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)}",
-        f"🥈 انس نقره:   {fmt(ons_silver, decimal=True)}",
+        f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
         "",
         f"🔹 حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
         f"🔹 حباب سکه بهار آزادی:   {fmt(hbab_bahar, bubble=True)}",
