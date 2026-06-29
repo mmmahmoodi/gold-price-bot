@@ -25,6 +25,7 @@ jobs:
       - name: Run bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          BRS_API_KEY: ${{ secrets.BRS_API_KEY }}
         run: python bot.py
 
       - name: Keep alive
