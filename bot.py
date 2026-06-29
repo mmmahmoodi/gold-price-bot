@@ -40,10 +40,10 @@ SYMBOLS = {
 }
 
 # ثابت‌های محاسباتی
-MESGHAL_GR = 4.608          # وزن یک مثقال به گرم
-OUNCES_GR = 31.1035         # وزن یک انس تروا به گرم
-ABSHODEH_PURITY = 705       # عیار استاندارد آبشده
-PURE_GOLD_PURITY = 999.9    # عیار طلای خالص
+MESGHAL_GR = 4.608
+OUNCES_GR = 31.1035
+ABSHODEH_PURITY = 705
+PURE_GOLD_PURITY = 999.9
 
 # وزن طلای خالص سکه‌ها
 COIN_GOLD_GR  = 8.133 * (22 / 24)
@@ -94,15 +94,16 @@ def fetch_all_prices():
         return {}
 
 def fetch_silver_ounce():
+    """دریافت انس نقره از goldprice.org"""
     try:
-        url = "https://api.metals.live/v1/spot/silver"
+        url = "https://data-asg.goldprice.org/dbXRates/USD"
         r = requests.get(url, headers=HEADERS, timeout=15)
         data = r.json()
-        if data and len(data) > 0:
-            return data[0].get("price")
+        if data and "items" in data and len(data["items"]) > 0:
+            return data["items"][0].get("xagPrice")
         return None
     except Exception as e:
-        print(f"️ Silver error: {e}")
+        print(f"⚠️ Silver error: {e}")
         return None
 
 def get_price(prices, key):
@@ -219,7 +220,7 @@ def build_message():
         f"🔸 آبشده (مثقال):   {fmt(abshodeh)}",
         f"🔸 سکه بهار آزادی:   {fmt(bahar)}",
         f"🔸 نیم سکه:   {fmt(nim)}",
-        f" ربع سکه:   {fmt(rob)}",
+        f"🔸 ربع سکه:   {fmt(rob)}",
         f"🔸 سکه گرمی:   {fmt(grami)}",
         f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)}",
         f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
@@ -232,7 +233,7 @@ def build_message():
         f"🔹 حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
         "",
         f"🔸 ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
-        f" ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
+        f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
         "",
         fa_date(),
         "",
