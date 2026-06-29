@@ -2,6 +2,8 @@ import requests
 import os
 import jdatetime
 import time
+import json
+import html as html_module
 from datetime import datetime, timezone, timedelta
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
@@ -10,6 +12,12 @@ CHANNEL_URL = "https://t.me/nerkh_tahlil"
 
 BRS_API_KEY = os.environ.get("BRS_API_KEY")
 BRS_API_URL = "https://Api.BrsApi.ir/Market/Gold_Currency.php"
+
+CACHE_FILE = "price_cache.json"
+CACHE_DURATION_MINUTES = 3
+
+COUNTER_FILE = "daily_counter.json"
+DAILY_LIMIT = 1400
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -50,6 +58,65 @@ NIM_GOLD_GR   = 4.066 * (22 / 24)
 ROB_GOLD_GR   = 2.033 * (22 / 24)
 GRAMI_GOLD_GR = 1.0 * (22 / 24)
 
+def load_cache():
+    try:
+        if os.path.exists(CACHE_FILE):
+            with open(CACHE_FILE, 'r') as f:
+                return json.load(f)
+    except:
+        pass
+    return None
+
+def save_cache(data):
+    try:
+        cache_data = {
+            "timestamp": datetime.now().isoformat(),
+            "data": data
+        }
+        with open(CACHE_FILE, 'w') as f:
+            json.dump(cache_data, f)
+    except Exception as e:
+        print(f"⚠️ Cache save error: {e}")
+
+def is_cache_valid(cache):
+    if not cache:
+        return False
+    try:
+        timestamp = datetime.fromisoformat(cache["timestamp"])
+        age = datetime.now() - timestamp
+        return age < timedelta(minutes=CACHE_DURATION_MINUTES)
+    except:
+        return False
+
+def load_counter():
+    try:
+        if os.path.exists(COUNTER_FILE):
+            with open(COUNTER_FILE, 'r') as f:
+                data = json.load(f)
+                today = datetime.now().strftime("%Y-%m-%d")
+                if data.get("date") == today:
+                    return data
+    except:
+        pass
+    return {"date": datetime.now().strftime("%Y-%m-%d"), "count": 0}
+
+def save_counter(counter):
+    try:
+        with open(COUNTER_FILE, 'w') as f:
+            json.dump(counter, f)
+    except Exception as e:
+        print(f"⚠️ Counter save error: {e}")
+
+def increment_counter():
+    counter = load_counter()
+    counter["count"] += 1
+    save_counter(counter)
+    return counter["count"]
+
+def can_make_request():
+    counter = load_counter()
+    return counter["count"] < DAILY_LIMIT
+
 def fetch_with_retry(url, params=None, max_retries=3, delay=2):
     for attempt in range(max_retries):
         try:
@@ -57,7 +124,7 @@ def fetch_with_retry(url, params=None, max_retries=3, delay=2):
             r.raise_for_status()
             return r
         except Exception as e:
-            print(f"⚠️ Attempt {attempt + 1} failed: {type(e).__name__}")
+            print(f"️ Attempt {attempt + 1} failed: {type(e).__name__}")
             if attempt < max_retries - 1:
                 time.sleep(delay)
                 delay *= 2
@@ -66,6 +133,18 @@ def fetch_with_retry(url, params=None, max_retries=3, delay=2):
     return None
 
 def fetch_all_prices():
+    cache = load_cache()
+    if is_cache_valid(cache):
+        age = datetime.now() - datetime.fromisoformat(cache["timestamp"])
+        print(f"✅ Using cache (age: {age.seconds//60}m {age.seconds%60}s)")
+        return cache["data"]
+    
+    if not can_make_request():
+        print(f"⚠️ Daily limit reached! Using old cache")
+        if cache:
+            return cache["data"]
+        return {}
+    
     try:
         params = {"key": BRS_API_KEY}
         r = fetch_with_retry(BRS_API_URL, params=params)
@@ -85,16 +164,20 @@ def fetch_all_prices():
             if symbol:
                 prices[symbol] = item
         
+        save_cache(prices)
+        count = increment_counter()
+        print(f"✅ Fetched from API (daily count: {count}/{DAILY_LIMIT})")
+        
         return prices
     
     except Exception as e:
         print(f"❌ Error: {e}")
+        if cache:
+            print(f"⚠️ Using old cache due to API error")
+            return cache["data"]
         return {}
 
 def fetch_silver_ounce():
-    """دریافت انس نقره با چند API fallback"""
-    
-    # روش 1: Swissquote Forex Feed
     try:
         url = "https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAG/USD"
         r = requests.get(url, headers=HEADERS, timeout=15)
@@ -102,24 +185,20 @@ def fetch_silver_ounce():
         if data and len(data) > 0:
             price = data[0].get("spreadProfilePrices", [{}])[0].get("bid")
             if price:
-                print(f"✅ Silver from Swissquote: {price}")
                 return price
     except Exception as e:
         print(f"⚠️ Swissquote error: {e}")
     
-    # روش 2: Currency API از CDN
     try:
         url = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xag.json"
         r = requests.get(url, headers=HEADERS, timeout=15)
         data = r.json()
         usd_per_xag = data.get("xag", {}).get("usd")
         if usd_per_xag:
-            print(f"✅ Silver from CDN: {usd_per_xag}")
             return usd_per_xag
     except Exception as e:
         print(f"⚠️ CDN error: {e}")
     
-    # روش 3: open.er-api.com
     try:
         url = "https://open.er-api.com/v6/latest/XAG"
         r = requests.get(url, headers=HEADERS, timeout=15)
@@ -127,12 +206,10 @@ def fetch_silver_ounce():
         if data.get("result") == "success":
             price = data.get("rates", {}).get("USD")
             if price:
-                print(f"✅ Silver from er-api: {price}")
                 return price
     except Exception as e:
         print(f"⚠️ er-api error: {e}")
     
-    print("❌ All silver APIs failed")
     return None
 
 def get_price(prices, key):
@@ -243,14 +320,14 @@ def build_message():
     lines = [
         f"💵 تتر:   {fmt(tether)}",
         f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
-        f"🔸 سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}",
+        f" سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}",
         f"🔸 گرم طلای 18:   {fmt(gold18)} {fmt(chg_gold18, change=True)}",
         f"🔸 گرم طلای 24:   {fmt(gold24)}",
         f"🔸 آبشده (مثقال):   {fmt(abshodeh)}",
         f"🔸 سکه بهار آزادی:   {fmt(bahar)}",
-        f"🔸 نیم سکه:   {fmt(nim)}",
+        f" نیم سکه:   {fmt(nim)}",
         f"🔸 ربع سکه:   {fmt(rob)}",
-        f"🔸 سکه گرمی:   {fmt(grami)}",
+        f" سکه گرمی:   {fmt(grami)}",
         f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)}",
         f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
         "",
@@ -272,7 +349,18 @@ def build_message():
 
 def send_to_telegram(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    r = requests.post(url, json={"chat_id": CHANNEL_ID, "text": text})
+    
+    # Escape HTML characters
+    escaped_text = html_module.escape(text)
+    
+    # Wrap entire message in hidden link to channel
+    html_text = f'<a href="{CHANNEL_URL}">{escaped_text}</a>'
+    
+    r = requests.post(url, json={
+        "chat_id": CHANNEL_ID, 
+        "text": html_text,
+        "parse_mode": "HTML"
+    })
     print("Status:", r.status_code)
 
 def main():
