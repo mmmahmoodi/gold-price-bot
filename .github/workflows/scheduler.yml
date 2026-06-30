@@ -2,12 +2,9 @@ name: Run Price Bot
 
 on:
   schedule:
-    # شنبه تا پنجشنبه: هر 5 دقیقه از 8 صبح تا 11 شب (به وقت ایران)
-    # 8:00 ایران = 4:30 UTC | 23:00 ایران = 19:30 UTC
-    # GitHub: 0=یکشنبه، 6=شنبه | پس 0-4,6 = یکشنبه تا پنجشنبه + شنبه
-    - cron: '*/5 4-19 * * 0-4,6'
+    - cron: '*/10 * * * *'
   
-  workflow_dispatch:  # اجرای دستی
+  workflow_dispatch:
 
 jobs:
   run-bot:
@@ -27,5 +24,6 @@ jobs:
     - name: Run bot
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
         BRS_API_KEY: ${{ secrets.BRS_API_KEY }}
       run: python bot.py
