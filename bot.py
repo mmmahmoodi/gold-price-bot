@@ -15,7 +15,6 @@ BALE_CHANNEL_ID = "@nerkh_tahlil"
 BALE_API_URL = "https://tapi.bale.ai/bot{token}/sendMessage"
 
 CHANNEL_URL = "https://t.me/nerkh_tahlil"
-CHANNEL_URL = "ble.ir/join/9Ss2wfgnZq"
 
 BRS_API_KEY = os.environ.get("BRS_API_KEY")
 BRS_API_URL = "https://Api.BrsApi.ir/Market/Gold_Currency.php"
@@ -177,7 +176,7 @@ def build_message():
     silver_oz = fetch_silver_ounce()
     
     if not prices:
-        return "❌ خطا در دریافت اطلاعات از سرور."
+        return "❌ خطا در دریافت اطلاعات از سرور.", ""
     
     tether     = get_price(prices, "tether")
     dollar     = get_price(prices, "dollar")
@@ -234,21 +233,27 @@ def build_message():
         f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
         "",
         fa_date(),
-        "",
-        CHANNEL_URL
     ]
-    return "\n".join(lines)
+    
+    main_text = "\n".join(lines)
+    bale_link = "ble.ir/join/9Ss2wfgnZq"
+    
+    return main_text, bale_link
 
 # ========== ارسال به تلگرام و بله ==========
 
-def send_to_telegram(text):
+def send_to_telegram(main_text, bale_link):
+    """ارسال به تلگرام با لینک مخفی به کانال تلگرام + لینک بله به صورت متن ساده"""
     if not TELEGRAM_BOT_TOKEN:
         print("⚠️ TELEGRAM_BOT_TOKEN not set")
         return
     
     url = TELEGRAM_API_URL.format(token=TELEGRAM_BOT_TOKEN)
-    escaped_text = html_module.escape(text)
-    html_text = f'<a href="{CHANNEL_URL}">{escaped_text}</a>'
+    
+    escaped_main = html_module.escape(main_text)
+    escaped_bale = html_module.escape(bale_link)
+    
+    html_text = f'<a href="{CHANNEL_URL}">{escaped_main}</a>\n\n{escaped_bale}'
     
     try:
         r = requests.post(url, json={
@@ -260,12 +265,15 @@ def send_to_telegram(text):
     except Exception as e:
         print(f"❌ Telegram error: {e}")
 
-def send_to_bale(text):
+def send_to_bale(main_text, bale_link):
+    """ارسال به بله"""
     if not BALE_BOT_TOKEN:
         print("⚠️ BALE_BOT_TOKEN not set")
         return
     
     url = BALE_API_URL.format(token=BALE_BOT_TOKEN)
+    
+    text = f"{main_text}\n\n{bale_link}"
     
     try:
         r = requests.post(url, json={
@@ -278,11 +286,17 @@ def send_to_bale(text):
 
 def main():
     print("Fetching prices...")
-    msg = build_message()
-    print(msg)
+    main_text, bale_link = build_message()
     
-    send_to_telegram(msg)
-    send_to_bale(msg)
+    if not main_text or main_text.startswith("❌"):
+        print(f"❌ Error: {main_text}")
+        return
+    
+    print(main_text)
+    print(f"\n{bale_link}")
+    
+    send_to_telegram(main_text, bale_link)
+    send_to_bale(main_text, bale_link)
 
 if __name__ == "__main__":
     main()
