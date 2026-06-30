@@ -236,14 +236,13 @@ def build_message():
     ]
     
     main_text = "\n".join(lines)
-    bale_link = "ble.ir/join/9Ss2wfgnZq"
     
-    return main_text, bale_link
+    return main_text
 
 # ========== ارسال به تلگرام و بله ==========
 
-def send_to_telegram(main_text, bale_link):
-    """ارسال به تلگرام با لینک مخفی به کانال تلگرام + لینک بله به صورت متن ساده"""
+def send_to_telegram(main_text):
+    """ارسال به تلگرام با لینک مخفی + نمایش هر دو لینک در انتها"""
     if not TELEGRAM_BOT_TOKEN:
         print("⚠️ TELEGRAM_BOT_TOKEN not set")
         return
@@ -251,9 +250,13 @@ def send_to_telegram(main_text, bale_link):
     url = TELEGRAM_API_URL.format(token=TELEGRAM_BOT_TOKEN)
     
     escaped_main = html_module.escape(main_text)
-    escaped_bale = html_module.escape(bale_link)
     
-    html_text = f'<a href="{CHANNEL_URL}">{escaped_main}</a>\n\n{escaped_bale}'
+    # لینک‌ها در انتها (خارج از تگ <a>)
+    telegram_link = "https://t.me/nerkh_tahlil"
+    bale_link = "ble.ir/join/9Ss2wfgnZq"
+    
+    # کل متن اصلی لینک می‌شود، دو لینک در انتها به صورت متن ساده
+    html_text = f'<a href="{CHANNEL_URL}">{escaped_main}</a>\n\n{telegram_link}\n{bale_link}'
     
     try:
         r = requests.post(url, json={
@@ -265,15 +268,18 @@ def send_to_telegram(main_text, bale_link):
     except Exception as e:
         print(f"❌ Telegram error: {e}")
 
-def send_to_bale(main_text, bale_link):
-    """ارسال به بله"""
+def send_to_bale(main_text):
+    """ارسال به بله با هر دو لینک در انتها"""
     if not BALE_BOT_TOKEN:
         print("⚠️ BALE_BOT_TOKEN not set")
         return
     
     url = BALE_API_URL.format(token=BALE_BOT_TOKEN)
     
-    text = f"{main_text}\n\n{bale_link}"
+    telegram_link = "https://t.me/nerkh_tahlil"
+    bale_link = "ble.ir/join/9Ss2wfgnZq"
+    
+    text = f"{main_text}\n\n{telegram_link}\n{bale_link}"
     
     try:
         r = requests.post(url, json={
@@ -286,17 +292,16 @@ def send_to_bale(main_text, bale_link):
 
 def main():
     print("Fetching prices...")
-    main_text, bale_link = build_message()
+    main_text = build_message()
     
     if not main_text or main_text.startswith("❌"):
         print(f"❌ Error: {main_text}")
         return
     
     print(main_text)
-    print(f"\n{bale_link}")
     
-    send_to_telegram(main_text, bale_link)
-    send_to_bale(main_text, bale_link)
+    send_to_telegram(main_text)
+    send_to_bale(main_text)
 
 if __name__ == "__main__":
     main()
