@@ -35,7 +35,8 @@ SYMBOLS = {
     "dollar": "USD", "tether": "USDT_IRT", "emami": "IR_COIN_EMAMI",
     "bahar": "IR_COIN_BAHAR", "nim": "IR_COIN_HALF", "rob": "IR_COIN_QUARTER",
     "grami": "IR_COIN_1G", "gold18": "IR_GOLD_18K", "gold24": "IR_GOLD_24K",
-    "abshodeh": "IR_GOLD_MELTED", "ons_gold": "XAUUSD"
+    "abshodeh": "IR_GOLD_MELTED", "ons_gold": "XAUUSD",
+    "euro": "EUR", "lira": "TRY", "dirham": "AED"
 }
 
 MESGHAL_GR = 4.608
@@ -76,7 +77,7 @@ def fetch_all_prices():
         return prices
     
     except Exception as e:
-        print(f"❌ Error fetching prices: {e}")
+        print(f" Error fetching prices: {e}")
         return {}
 
 def fetch_silver_ounce():
@@ -176,10 +177,13 @@ def build_message():
     silver_oz = fetch_silver_ounce()
     
     if not prices:
-        return "❌ خطا در دریافت اطلاعات از سرور.", ""
+        return "❌ خطا در دریافت اطلاعات از سرور."
     
     tether     = get_price(prices, "tether")
     dollar     = get_price(prices, "dollar")
+    euro       = get_price(prices, "euro")
+    lira       = get_price(prices, "lira")
+    dirham     = get_price(prices, "dirham")
     emami      = get_price(prices, "emami")
     gold18     = get_price(prices, "gold18")
     gold24     = get_price(prices, "gold24")
@@ -191,6 +195,9 @@ def build_message():
     ons_gold   = get_price(prices, "ons_gold")
     
     chg_dollar = get_change(prices, "dollar")
+    chg_euro   = get_change(prices, "euro")
+    chg_lira   = get_change(prices, "lira")
+    chg_dirham = get_change(prices, "dirham")
     chg_emami  = get_change(prices, "emami")
     chg_gold18 = get_change(prices, "gold18")
     
@@ -211,6 +218,9 @@ def build_message():
     lines = [
         f"💵 تتر:   {fmt(tether)}",
         f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
+        f"💶 یورو:   {fmt(euro)} {fmt(chg_euro, change=True)}",
+        f"🇷 لیر ترکیه:   {fmt(lira)} {fmt(chg_lira, change=True)}",
+        f"🇦 درهم امارات:   {fmt(dirham)} {fmt(chg_dirham, change=True)}",
         f"🔸 سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}",
         f"🔸 گرم طلای 18:   {fmt(gold18)} {fmt(chg_gold18, change=True)}",
         f"🔸 گرم طلای 24:   {fmt(gold24)}",
@@ -219,15 +229,15 @@ def build_message():
         f"🔸 نیم سکه:   {fmt(nim)}",
         f"🔸 ربع سکه:   {fmt(rob)}",
         f"🔸 سکه گرمی:   {fmt(grami)}",
-        f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)}",
+        f" انس طلا:   {fmt(ons_gold, decimal=True)}",
         f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
         "",
-        f"🔹 حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
+        f" حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
         f"🔹 حباب سکه بهار آزادی:   {fmt(hbab_bahar, bubble=True)}",
         f"🔹 حباب نیم سکه:   {fmt(hbab_nim, bubble=True)}",
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
         f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
-        f"🔹 حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
+        f" حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
         "",
         f"🔸 ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
         f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
@@ -235,9 +245,7 @@ def build_message():
         fa_date(),
     ]
     
-    main_text = "\n".join(lines)
-    
-    return main_text
+    return "\n".join(lines)
 
 # ========== ارسال به تلگرام و بله ==========
 
@@ -251,11 +259,9 @@ def send_to_telegram(main_text):
     
     escaped_main = html_module.escape(main_text)
     
-    # لینک‌ها در انتها (خارج از تگ <a>)
     telegram_link = "https://t.me/nerkh_tahlil"
     bale_link = "ble.ir/join/9Ss2wfgnZq"
     
-    # کل متن اصلی لینک می‌شود، دو لینک در انتها به صورت متن ساده
     html_text = f'<a href="{CHANNEL_URL}">{escaped_main}</a>\n\n{telegram_link}\n{bale_link}'
     
     try:
@@ -288,14 +294,14 @@ def send_to_bale(main_text):
         }, timeout=15)
         print(f"📤 Bale Status: {r.status_code}")
     except Exception as e:
-        print(f"❌ Bale error: {e}")
+        print(f" Bale error: {e}")
 
 def main():
     print("Fetching prices...")
     main_text = build_message()
     
     if not main_text or main_text.startswith("❌"):
-        print(f"❌ Error: {main_text}")
+        print(f" Error: {main_text}")
         return
     
     print(main_text)
