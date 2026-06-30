@@ -15,6 +15,7 @@ BALE_CHANNEL_ID = "@nerkh_tahlil"
 BALE_API_URL = "https://tapi.bale.ai/bot{token}/sendMessage"
 
 CHANNEL_URL = "https://t.me/nerkh_tahlil"
+CHANNEL_URL = "ble.ir/join/9Ss2wfgnZq"
 
 BRS_API_KEY = os.environ.get("BRS_API_KEY")
 BRS_API_URL = "https://Api.BrsApi.ir/Market/Gold_Currency.php"
