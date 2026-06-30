@@ -77,7 +77,7 @@ def fetch_all_prices():
         return prices
     
     except Exception as e:
-        print(f" Error fetching prices: {e}")
+        print(f"❌ Error fetching prices: {e}")
         return {}
 
 def fetch_silver_ounce():
@@ -219,8 +219,8 @@ def build_message():
         f"💵 تتر:   {fmt(tether)}",
         f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
         f"💶 یورو:   {fmt(euro)} {fmt(chg_euro, change=True)}",
-        f"🇷 لیر ترکیه:   {fmt(lira)} {fmt(chg_lira, change=True)}",
-        f"🇦 درهم امارات:   {fmt(dirham)} {fmt(chg_dirham, change=True)}",
+        f"🌙 لیر ترکیه:   {fmt(lira)} {fmt(chg_lira, change=True)}",
+        f"🌴 درهم امارات:   {fmt(dirham)} {fmt(chg_dirham, change=True)}",
         f"🔸 سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}",
         f"🔸 گرم طلای 18:   {fmt(gold18)} {fmt(chg_gold18, change=True)}",
         f"🔸 گرم طلای 24:   {fmt(gold24)}",
@@ -229,15 +229,15 @@ def build_message():
         f"🔸 نیم سکه:   {fmt(nim)}",
         f"🔸 ربع سکه:   {fmt(rob)}",
         f"🔸 سکه گرمی:   {fmt(grami)}",
-        f" انس طلا:   {fmt(ons_gold, decimal=True)}",
+        f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)}",
         f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
         "",
-        f" حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
+        f"🔹 حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
         f"🔹 حباب سکه بهار آزادی:   {fmt(hbab_bahar, bubble=True)}",
         f"🔹 حباب نیم سکه:   {fmt(hbab_nim, bubble=True)}",
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
         f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
-        f" حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
+        f"🔹 حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
         "",
         f"🔸 ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
         f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
@@ -294,14 +294,14 @@ def send_to_bale(main_text):
         }, timeout=15)
         print(f"📤 Bale Status: {r.status_code}")
     except Exception as e:
-        print(f" Bale error: {e}")
+        print(f"❌ Bale error: {e}")
 
 def main():
     print("Fetching prices...")
     main_text = build_message()
     
     if not main_text or main_text.startswith("❌"):
-        print(f" Error: {main_text}")
+        print(f"❌ Error: {main_text}")
         return
     
     print(main_text)
