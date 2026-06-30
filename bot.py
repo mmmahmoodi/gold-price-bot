@@ -1,31 +1,29 @@
 import requests
 import os
 import jdatetime
-import time
-import json
 import html as html_module
 from datetime import datetime, timezone, timedelta
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]
-CHANNEL_ID = "@nerkh_tahlil"
+# ===== تلگرام =====
+TELEGRAM_BOT_TOKEN = os.environ.get("BOT_TOKEN")
+TELEGRAM_CHANNEL_ID = "@nerkh_tahlil"
+TELEGRAM_API_URL = "https://api.telegram.org/bot{token}/sendMessage"
+
+# ===== بله =====
+BALE_BOT_TOKEN = os.environ.get("BALE_BOT_TOKEN")
+BALE_CHANNEL_ID = "@nerkh_tahlil"
+BALE_API_URL = "https://tapi.bale.ai/bot{token}/sendMessage"
+
 CHANNEL_URL = "https://t.me/nerkh_tahlil"
 
 BRS_API_KEY = os.environ.get("BRS_API_KEY")
 BRS_API_URL = "https://Api.BrsApi.ir/Market/Gold_Currency.php"
 
-CACHE_FILE = "price_cache.json"
-CACHE_DURATION_MINUTES = 3
-
-COUNTER_FILE = "daily_counter.json"
-DAILY_LIMIT = 1400
-
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9,fa;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1"
+    "Connection": "keep-alive"
 }
 
 DAYS_FA = {
@@ -34,17 +32,10 @@ DAYS_FA = {
 }
 
 SYMBOLS = {
-    "dollar": "USD",
-    "tether": "USDT_IRT",
-    "emami": "IR_COIN_EMAMI",
-    "bahar": "IR_COIN_BAHAR",
-    "nim": "IR_COIN_HALF",
-    "rob": "IR_COIN_QUARTER",
-    "grami": "IR_COIN_1G",
-    "gold18": "IR_GOLD_18K",
-    "gold24": "IR_GOLD_24K",
-    "abshodeh": "IR_GOLD_MELTED",
-    "ons_gold": "XAUUSD"
+    "dollar": "USD", "tether": "USDT_IRT", "emami": "IR_COIN_EMAMI",
+    "bahar": "IR_COIN_BAHAR", "nim": "IR_COIN_HALF", "rob": "IR_COIN_QUARTER",
+    "grami": "IR_COIN_1G", "gold18": "IR_GOLD_18K", "gold24": "IR_GOLD_24K",
+    "abshodeh": "IR_GOLD_MELTED", "ons_gold": "XAUUSD"
 }
 
 MESGHAL_GR = 4.608
@@ -58,96 +49,13 @@ NIM_GOLD_GR   = 4.066 * (22 / 24)
 ROB_GOLD_GR   = 2.033 * (22 / 24)
 GRAMI_GOLD_GR = 1.0 * (22 / 24)
 
-def load_cache():
-    try:
-        if os.path.exists(CACHE_FILE):
-            with open(CACHE_FILE, 'r') as f:
-                return json.load(f)
-    except:
-        pass
-    return None
-
-def save_cache(data):
-    try:
-        cache_data = {
-            "timestamp": datetime.now().isoformat(),
-            "data": data
-        }
-        with open(CACHE_FILE, 'w') as f:
-            json.dump(cache_data, f)
-    except Exception as e:
-        print(f"⚠️ Cache save error: {e}")
-
-def is_cache_valid(cache):
-    if not cache:
-        return False
-    try:
-        timestamp = datetime.fromisoformat(cache["timestamp"])
-        age = datetime.now() - timestamp
-        return age < timedelta(minutes=CACHE_DURATION_MINUTES)
-    except:
-        return False
-
-def load_counter():
-    try:
-        if os.path.exists(COUNTER_FILE):
-            with open(COUNTER_FILE, 'r') as f:
-                data = json.load(f)
-                today = datetime.now().strftime("%Y-%m-%d")
-                if data.get("date") == today:
-                    return data
-    except:
-        pass
-    return {"date": datetime.now().strftime("%Y-%m-%d"), "count": 0}
-
-def save_counter(counter):
-    try:
-        with open(COUNTER_FILE, 'w') as f:
-            json.dump(counter, f)
-    except Exception as e:
-        print(f"⚠️ Counter save error: {e}")
-
-def increment_counter():
-    counter = load_counter()
-    counter["count"] += 1
-    save_counter(counter)
-    return counter["count"]
-
-def can_make_request():
-    counter = load_counter()
-    return counter["count"] < DAILY_LIMIT
-
-def fetch_with_retry(url, params=None, max_retries=3, delay=2):
-    for attempt in range(max_retries):
-        try:
-            r = requests.get(url, params=params, headers=HEADERS, timeout=20)
-            r.raise_for_status()
-            return r
-        except Exception as e:
-            print(f"️ Attempt {attempt + 1} failed: {type(e).__name__}")
-            if attempt < max_retries - 1:
-                time.sleep(delay)
-                delay *= 2
-            else:
-                raise e
-    return None
+# ========== توابع دریافت قیمت ==========
 
 def fetch_all_prices():
-    cache = load_cache()
-    if is_cache_valid(cache):
-        age = datetime.now() - datetime.fromisoformat(cache["timestamp"])
-        print(f"✅ Using cache (age: {age.seconds//60}m {age.seconds%60}s)")
-        return cache["data"]
-    
-    if not can_make_request():
-        print(f"⚠️ Daily limit reached! Using old cache")
-        if cache:
-            return cache["data"]
-        return {}
-    
     try:
         params = {"key": BRS_API_KEY}
-        r = fetch_with_retry(BRS_API_URL, params=params)
+        r = requests.get(BRS_API_URL, params=params, headers=HEADERS, timeout=20)
+        r.raise_for_status()
         data = r.json()
         
         if not data.get("successful", True):
@@ -164,17 +72,11 @@ def fetch_all_prices():
             if symbol:
                 prices[symbol] = item
         
-        save_cache(prices)
-        count = increment_counter()
-        print(f"✅ Fetched from API (daily count: {count}/{DAILY_LIMIT})")
-        
+        print(f"✅ Fetched {len(prices)} prices from API")
         return prices
     
     except Exception as e:
-        print(f"❌ Error: {e}")
-        if cache:
-            print(f"⚠️ Using old cache due to API error")
-            return cache["data"]
+        print(f"❌ Error fetching prices: {e}")
         return {}
 
 def fetch_silver_ounce():
@@ -198,17 +100,6 @@ def fetch_silver_ounce():
             return usd_per_xag
     except Exception as e:
         print(f"⚠️ CDN error: {e}")
-    
-    try:
-        url = "https://open.er-api.com/v6/latest/XAG"
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        data = r.json()
-        if data.get("result") == "success":
-            price = data.get("rates", {}).get("USD")
-            if price:
-                return price
-    except Exception as e:
-        print(f"⚠️ er-api error: {e}")
     
     return None
 
@@ -320,14 +211,14 @@ def build_message():
     lines = [
         f"💵 تتر:   {fmt(tether)}",
         f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
-        f" سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}",
+        f"🔸 سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}",
         f"🔸 گرم طلای 18:   {fmt(gold18)} {fmt(chg_gold18, change=True)}",
         f"🔸 گرم طلای 24:   {fmt(gold24)}",
         f"🔸 آبشده (مثقال):   {fmt(abshodeh)}",
         f"🔸 سکه بهار آزادی:   {fmt(bahar)}",
-        f" نیم سکه:   {fmt(nim)}",
+        f"🔸 نیم سکه:   {fmt(nim)}",
         f"🔸 ربع سکه:   {fmt(rob)}",
-        f" سکه گرمی:   {fmt(grami)}",
+        f"🔸 سکه گرمی:   {fmt(grami)}",
         f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)}",
         f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
         "",
@@ -347,27 +238,50 @@ def build_message():
     ]
     return "\n".join(lines)
 
+# ========== ارسال به تلگرام و بله ==========
+
 def send_to_telegram(text):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    if not TELEGRAM_BOT_TOKEN:
+        print("⚠️ TELEGRAM_BOT_TOKEN not set")
+        return
     
-    # Escape HTML characters
+    url = TELEGRAM_API_URL.format(token=TELEGRAM_BOT_TOKEN)
     escaped_text = html_module.escape(text)
-    
-    # Wrap entire message in hidden link to channel
     html_text = f'<a href="{CHANNEL_URL}">{escaped_text}</a>'
     
-    r = requests.post(url, json={
-        "chat_id": CHANNEL_ID, 
-        "text": html_text,
-        "parse_mode": "HTML"
-    })
-    print("Status:", r.status_code)
+    try:
+        r = requests.post(url, json={
+            "chat_id": TELEGRAM_CHANNEL_ID, 
+            "text": html_text,
+            "parse_mode": "HTML"
+        }, timeout=15)
+        print(f"📤 Telegram Status: {r.status_code}")
+    except Exception as e:
+        print(f"❌ Telegram error: {e}")
+
+def send_to_bale(text):
+    if not BALE_BOT_TOKEN:
+        print("⚠️ BALE_BOT_TOKEN not set")
+        return
+    
+    url = BALE_API_URL.format(token=BALE_BOT_TOKEN)
+    
+    try:
+        r = requests.post(url, json={
+            "chat_id": BALE_CHANNEL_ID, 
+            "text": text
+        }, timeout=15)
+        print(f"📤 Bale Status: {r.status_code}")
+    except Exception as e:
+        print(f"❌ Bale error: {e}")
 
 def main():
     print("Fetching prices...")
     msg = build_message()
     print(msg)
+    
     send_to_telegram(msg)
+    send_to_bale(msg)
 
 if __name__ == "__main__":
     main()
