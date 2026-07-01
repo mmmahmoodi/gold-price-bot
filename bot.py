@@ -50,6 +50,36 @@ NIM_GOLD_GR   = 4.066 * (22 / 24)
 ROB_GOLD_GR   = 2.033 * (22 / 24)
 GRAMI_GOLD_GR = 1.0 * (22 / 24)
 
+# ========== بررسی ساعات کاری ==========
+
+def is_working_hours():
+    """
+    بررسی آیا الان ساعات کاری است یا نه
+    شنبه تا پنجشنبه، 8 صبح تا 10 شب به وقت ایران
+    """
+    # زمان ایران (UTC+3:30)
+    iran_tz = timezone(timedelta(hours=3, minutes=30))
+    now = datetime.now(iran_tz)
+    
+    # روز هفته (0=شنبه، 1=یکشنبه، ...، 5=پنجشنبه، 6=جمعه)
+    # در jdatetime: Saturday=0, Sunday=1, ..., Friday=6
+    jdt = jdatetime.datetime.fromgregorian(datetime=now)
+    day_of_week = jdt.weekday()  # 0=شنبه، 6=جمعه
+    
+    # جمعه تعطیل است
+    if day_of_week == 6:
+        print(f"️ Today is Friday (تعطیل). Skipping...")
+        return False
+    
+    # ساعت کاری: 8 صبح تا 10 شب (22:00)
+    hour = now.hour
+    if hour < 8 or hour >= 22:
+        print(f"️ Current hour is {hour}:00 (خارج از ساعات کاری 8-22). Skipping...")
+        return False
+    
+    print(f"✅ Working hours: {DAYS_FA.get(jdt.strftime('%A'), '')} {now.strftime('%H:%M')}")
+    return True
+
 # ========== توابع دریافت قیمت ==========
 
 def fetch_all_prices():
@@ -220,7 +250,7 @@ def build_message():
         f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
         f"💶 یورو:   {fmt(euro)} {fmt(chg_euro, change=True)}",
         f"🌙 لیر ترکیه:   {fmt(lira)} {fmt(chg_lira, change=True)}",
-        f"🌴 درهم امارات:   {fmt(dirham)} {fmt(chg_dirham, change=True)}",
+        f" درهم امارات:   {fmt(dirham)} {fmt(chg_dirham, change=True)}",
         f"🔸 سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}",
         f"🔸 گرم طلای 18:   {fmt(gold18)} {fmt(chg_gold18, change=True)}",
         f"🔸 گرم طلای 24:   {fmt(gold24)}",
@@ -229,15 +259,15 @@ def build_message():
         f"🔸 نیم سکه:   {fmt(nim)}",
         f"🔸 ربع سکه:   {fmt(rob)}",
         f"🔸 سکه گرمی:   {fmt(grami)}",
-        f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)}",
+        f" انس طلا:   {fmt(ons_gold, decimal=True)}",
         f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
         "",
-        f"🔹 حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
+        f" حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
         f"🔹 حباب سکه بهار آزادی:   {fmt(hbab_bahar, bubble=True)}",
         f"🔹 حباب نیم سکه:   {fmt(hbab_nim, bubble=True)}",
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
         f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
-        f"🔹 حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
+        f" حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
         "",
         f"🔸 ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
         f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
@@ -250,7 +280,6 @@ def build_message():
 # ========== ارسال به تلگرام و بله ==========
 
 def send_to_telegram(main_text):
-    """ارسال به تلگرام با لینک مخفی + نمایش هر دو لینک در انتها"""
     if not TELEGRAM_BOT_TOKEN:
         print("⚠️ TELEGRAM_BOT_TOKEN not set")
         return
@@ -275,9 +304,8 @@ def send_to_telegram(main_text):
         print(f"❌ Telegram error: {e}")
 
 def send_to_bale(main_text):
-    """ارسال به بله با هر دو لینک در انتها"""
     if not BALE_BOT_TOKEN:
-        print("⚠️ BALE_BOT_TOKEN not set")
+        print("️ BALE_BOT_TOKEN not set")
         return
     
     url = BALE_API_URL.format(token=BALE_BOT_TOKEN)
@@ -297,6 +325,15 @@ def send_to_bale(main_text):
         print(f"❌ Bale error: {e}")
 
 def main():
+    print("=" * 50)
+    print("🤖 Price Bot Started")
+    print("=" * 50)
+    
+    # بررسی ساعات کاری
+    if not is_working_hours():
+        print("⏸️ Bot stopped: Outside working hours")
+        return
+    
     print("Fetching prices...")
     main_text = build_message()
     
@@ -308,6 +345,10 @@ def main():
     
     send_to_telegram(main_text)
     send_to_bale(main_text)
+    
+    print("=" * 50)
+    print("✅ Bot completed successfully")
+    print("=" * 50)
 
 if __name__ == "__main__":
     main()
