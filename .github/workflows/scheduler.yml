@@ -1,11 +1,11 @@
 name: Run Price Bot
 
+# تغییر مهم: گوش دادن به دستور از راه دور (Cron-job.org) و اجرای دستی
 on:
-  schedule:
-    # هر 10 دقیقه (ربات خودش چک می‌کند آیا ساعات کاری است یا نه)
-    - cron: '*/10 * * * *'
+  repository_dispatch:
+    types: [run-bot]  # نام رویداد باید با چیزی که در Cron-job.org می‌فرستیم یکی باشد
   
-  workflow_dispatch:
+  workflow_dispatch:  # برای تست دستی
 
 jobs:
   run-bot:
