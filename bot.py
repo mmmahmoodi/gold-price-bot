@@ -36,7 +36,8 @@ SYMBOLS = {
     "bahar": "IR_COIN_BAHAR", "nim": "IR_COIN_HALF", "rob": "IR_COIN_QUARTER",
     "grami": "IR_COIN_1G", "gold18": "IR_GOLD_18K", "gold24": "IR_GOLD_24K",
     "abshodeh": "IR_GOLD_MELTED", "ons_gold": "XAUUSD",
-    "euro": "EUR", "lira": "TRY", "dirham": "AED"
+    "euro": "EUR", "lira": "TRY", "dirham": "AED",
+    "bitcoin": "BTC", "ethereum": "ETH"
 }
 
 MESGHAL_GR = 4.608
@@ -191,11 +192,14 @@ def build_message():
     if not prices:
         return " خطا در دریافت اطلاعات از سرور."
     
+    # ارزها
     tether     = get_price(prices, "tether")
     dollar     = get_price(prices, "dollar")
     euro       = get_price(prices, "euro")
     lira       = get_price(prices, "lira")
     dirham     = get_price(prices, "dirham")
+    
+    # طلا و سکه
     emami      = get_price(prices, "emami")
     gold18     = get_price(prices, "gold18")
     gold24     = get_price(prices, "gold24")
@@ -206,6 +210,11 @@ def build_message():
     grami      = get_price(prices, "grami")
     ons_gold   = get_price(prices, "ons_gold")
     
+    # ارزهای دیجیتال
+    bitcoin    = get_price(prices, "bitcoin")
+    ethereum   = get_price(prices, "ethereum")
+    
+    # درصدهای تغییر
     chg_dollar = get_change(prices, "dollar")
     chg_euro   = get_change(prices, "euro")
     chg_lira   = get_change(prices, "lira")
@@ -220,7 +229,10 @@ def build_message():
     chg_rob    = get_change(prices, "rob")
     chg_grami  = get_change(prices, "grami")
     chg_ons_gold = get_change(prices, "ons_gold")
+    chg_bitcoin = get_change(prices, "bitcoin")
+    chg_ethereum = get_change(prices, "ethereum")
     
+    # محاسبات
     intr_emami  = calc_coin_intrinsic(gold24, COIN_GOLD_GR)
     intr_bahar  = calc_coin_intrinsic(gold24, BAHAR_GOLD_GR)
     intr_nim    = calc_coin_intrinsic(gold24, NIM_GOLD_GR)
@@ -236,52 +248,61 @@ def build_message():
     hbab_abshodeh = calc_bubble_pct(abshodeh, intr_abshodeh)
     
     lines = [
+        # ارزها
         f"💵 تتر:   {fmt(tether)} {fmt(chg_tether, change=True)}",
-        f" دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
+        f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
         f" یورو:   {fmt(euro)} {fmt(chg_euro, change=True)}",
-        f"🌙 لیر ترکیه:   {fmt(lira)} {fmt(chg_lira, change=True)}",
+        f" لیر ترکیه:   {fmt(lira)} {fmt(chg_lira, change=True)}",
         f"🌴 درهم امارات:   {fmt(dirham)} {fmt(chg_dirham, change=True)}",
         "",
+        
+        # طلا و سکه
         f"<b>🔸 سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}</b>",
         f"🔸 گرم طلای 18:   {fmt(gold18)} {fmt(chg_gold18, change=True)}",
-        f" گرم طلای 24:   {fmt(gold24)} {fmt(chg_gold24, change=True)}",
-        f"<b> آبشده (مثقال):   {fmt(abshodeh)} {fmt(chg_abshodeh, change=True)}</b>",
-        f" سکه بهار آزادی:   {fmt(bahar)} {fmt(chg_bahar, change=True)}",
+        f"🔸 گرم طلای 24:   {fmt(gold24)} {fmt(chg_gold24, change=True)}",
+        f"<b>🔸 آبشده (مثقال):   {fmt(abshodeh)} {fmt(chg_abshodeh, change=True)}</b>",
+        f"🔸 سکه بهار آزادی:   {fmt(bahar)} {fmt(chg_bahar, change=True)}",
         f"🔸 نیم سکه:   {fmt(nim)} {fmt(chg_nim, change=True)}",
         f"🔸 ربع سکه:   {fmt(rob)} {fmt(chg_rob, change=True)}",
         f"🔸 سکه گرمی:   {fmt(grami)} {fmt(chg_grami, change=True)}",
-        f" انس طلا:   {fmt(ons_gold, decimal=True)} {fmt(chg_ons_gold, change=True)}",
+        "",
+        
+        # انس‌ها
+        f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)} {fmt(chg_ons_gold, change=True)}",
         f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
         "",
-        f" حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
+        
+        # حباب‌ها
+        f"🔹 حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
         f"🔹 حباب سکه بهار آزادی:   {fmt(hbab_bahar, bubble=True)}",
         f"🔹 حباب نیم سکه:   {fmt(hbab_nim, bubble=True)}",
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
-        f" حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
+        f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
         f"🔹 حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
         "",
-        f"🔸 ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
-        f" ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
+        
+        # ارزش ذاتی
+        f" ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
+        f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
         "",
+        
+        # ارزهای دیجیتال
+        f"₿ بیت‌کوین:   {fmt(bitcoin, decimal=True)} {fmt(chg_bitcoin, change=True)}",
+        f"Ξ اتریوم:   {fmt(ethereum, decimal=True)} {fmt(chg_ethereum, change=True)}",
+        "",
+        
+        # تاریخ
         fa_date(),
     ]
     
     return "\n".join(lines)
 
 def send_to_telegram(main_text):
-    """ارسال به تلگرام با لاگ کامل"""
     if not TELEGRAM_BOT_TOKEN:
         print("⚠️ TELEGRAM_BOT_TOKEN not set")
         return False
     
-    print("\n" + "="*60)
-    print("📤 TELEGRAM DEBUG INFO:")
-    print("="*60)
-    print(f"Token (first 10 chars): {TELEGRAM_BOT_TOKEN[:10]}...")
-    print(f"Channel ID: {TELEGRAM_CHANNEL_ID}")
-    
     url = TELEGRAM_API_URL.format(token=TELEGRAM_BOT_TOKEN)
-    print(f"URL: {url}")
     
     escaped_main = html_module.escape(main_text)
     escaped_main = escaped_main.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
@@ -291,42 +312,23 @@ def send_to_telegram(main_text):
     
     html_text = f'<a href="{CHANNEL_URL}">{escaped_main}</a>\n\n{telegram_link}\n{bale_link}'
     
-    payload = {
-        "chat_id": TELEGRAM_CHANNEL_ID, 
-        "text": html_text,
-        "parse_mode": "HTML"
-    }
-    
-    print(f"\nPayload text length: {len(html_text)} chars")
-    print(f"Parse mode: HTML")
-    print("\nSending request...")
-    
     try:
-        r = requests.post(url, json=payload, timeout=15)
-        print(f"\n📊 RESPONSE STATUS: {r.status_code}")
-        print(f"📄 RESPONSE TEXT: {r.text[:500]}")
-        print(f"📄 RESPONSE JSON: {r.json()}")
-        
-        if r.status_code == 200:
-            print("✅ Telegram sent successfully!")
-            return True
-        else:
-            print(f"❌ Telegram failed with status {r.status_code}")
-            return False
-            
+        r = requests.post(url, json={
+            "chat_id": TELEGRAM_CHANNEL_ID, 
+            "text": html_text,
+            "parse_mode": "HTML"
+        }, timeout=15)
+        print(f" Telegram Status: {r.status_code}")
+        return r.status_code == 200
     except Exception as e:
-        print(f"\n❌ EXCEPTION: {type(e).__name__}: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f" Telegram error: {e}")
         return False
 
 def send_to_bale(main_text):
-    """ارسال به بله"""
     if not BALE_BOT_TOKEN:
         print("⚠️ BALE_BOT_TOKEN not set")
         return False
     
-    print("\n Sending to Bale...")
     url = BALE_API_URL.format(token=BALE_BOT_TOKEN)
     
     telegram_link = "https://t.me/nerkh_tahlil"
@@ -339,7 +341,7 @@ def send_to_bale(main_text):
             "chat_id": BALE_CHANNEL_ID, 
             "text": text
         }, timeout=15)
-        print(f" Bale Status: {r.status_code}")
+        print(f"📤 Bale Status: {r.status_code}")
         return r.status_code == 200
     except Exception as e:
         print(f"❌ Bale error: {e}")
@@ -358,7 +360,7 @@ def main():
     main_text = build_message()
     
     if not main_text or main_text.startswith("❌"):
-        print(f"❌ Error: {main_text}")
+        print(f" Error: {main_text}")
         return
     
     tg_success = send_to_telegram(main_text)
