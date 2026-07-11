@@ -50,32 +50,20 @@ NIM_GOLD_GR   = 4.066 * (22 / 24)
 ROB_GOLD_GR   = 2.033 * (22 / 24)
 GRAMI_GOLD_GR = 1.0 * (22 / 24)
 
-# ========== بررسی ساعات کاری ==========
-
 def is_working_hours():
-    """
-    بررسی آیا الان ساعات کاری است یا نه
-    شنبه تا پنجشنبه، 8 صبح تا 10 شب به وقت ایران
-    """
     iran_tz = timezone(timedelta(hours=3, minutes=30))
     now = datetime.now(iran_tz)
-    
     jdt = jdatetime.datetime.fromgregorian(datetime=now)
     day_of_week = jdt.weekday()
     
     if day_of_week == 6:
-        print(f"⏸️ Today is Friday (تعطیل). Skipping...")
         return False
     
     hour = now.hour
     if hour < 8 or hour >= 22:
-        print(f"⏸️ Current hour is {hour}:00 (خارج از ساعات کاری 8-22). Skipping...")
         return False
     
-    print(f"✅ Working hours: {DAYS_FA.get(jdt.strftime('%A'), '')} {now.strftime('%H:%M')}")
     return True
-
-# ========== توابع دریافت قیمت ==========
 
 def fetch_all_prices():
     try:
@@ -98,11 +86,10 @@ def fetch_all_prices():
             if symbol:
                 prices[symbol] = item
         
-        print(f"✅ Fetched {len(prices)} prices from API")
         return prices
     
     except Exception as e:
-        print(f"❌ Error fetching prices: {e}")
+        print(f" Error fetching prices: {e}")
         return {}
 
 def fetch_silver_ounce():
@@ -114,8 +101,8 @@ def fetch_silver_ounce():
             price = data[0].get("spreadProfilePrices", [{}])[0].get("bid")
             if price:
                 return price
-    except Exception as e:
-        print(f"⚠️ Swissquote error: {e}")
+    except:
+        pass
     
     try:
         url = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xag.json"
@@ -124,8 +111,8 @@ def fetch_silver_ounce():
         usd_per_xag = data.get("xag", {}).get("usd")
         if usd_per_xag:
             return usd_per_xag
-    except Exception as e:
-        print(f"⚠️ CDN error: {e}")
+    except:
+        pass
     
     return None
 
@@ -202,7 +189,7 @@ def build_message():
     silver_oz = fetch_silver_ounce()
     
     if not prices:
-        return "❌ خطا در دریافت اطلاعات از سرور."
+        return " خطا در دریافت اطلاعات از سرور."
     
     tether     = get_price(prices, "tether")
     dollar     = get_price(prices, "dollar")
@@ -250,46 +237,51 @@ def build_message():
     
     lines = [
         f"💵 تتر:   {fmt(tether)} {fmt(chg_tether, change=True)}",
-        f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
-        f"💶 یورو:   {fmt(euro)} {fmt(chg_euro, change=True)}",
+        f" دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
+        f" یورو:   {fmt(euro)} {fmt(chg_euro, change=True)}",
         f"🌙 لیر ترکیه:   {fmt(lira)} {fmt(chg_lira, change=True)}",
         f"🌴 درهم امارات:   {fmt(dirham)} {fmt(chg_dirham, change=True)}",
         "",
         f"<b>🔸 سکه امامی:   {fmt(emami)} {fmt(chg_emami, change=True)}</b>",
         f"🔸 گرم طلای 18:   {fmt(gold18)} {fmt(chg_gold18, change=True)}",
-        f"🔸 گرم طلای 24:   {fmt(gold24)} {fmt(chg_gold24, change=True)}",
-        f"<b>🔸 آبشده (مثقال):   {fmt(abshodeh)} {fmt(chg_abshodeh, change=True)}</b>",
-        f"🔸 سکه بهار آزادی:   {fmt(bahar)} {fmt(chg_bahar, change=True)}",
+        f" گرم طلای 24:   {fmt(gold24)} {fmt(chg_gold24, change=True)}",
+        f"<b> آبشده (مثقال):   {fmt(abshodeh)} {fmt(chg_abshodeh, change=True)}</b>",
+        f" سکه بهار آزادی:   {fmt(bahar)} {fmt(chg_bahar, change=True)}",
         f"🔸 نیم سکه:   {fmt(nim)} {fmt(chg_nim, change=True)}",
         f"🔸 ربع سکه:   {fmt(rob)} {fmt(chg_rob, change=True)}",
         f"🔸 سکه گرمی:   {fmt(grami)} {fmt(chg_grami, change=True)}",
-        f"🥇 انس طلا:   {fmt(ons_gold, decimal=True)} {fmt(chg_ons_gold, change=True)}",
+        f" انس طلا:   {fmt(ons_gold, decimal=True)} {fmt(chg_ons_gold, change=True)}",
         f"🥈 انس نقره:   {fmt(silver_oz, decimal=True)}",
         "",
-        f"🔹 حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
+        f" حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
         f"🔹 حباب سکه بهار آزادی:   {fmt(hbab_bahar, bubble=True)}",
         f"🔹 حباب نیم سکه:   {fmt(hbab_nim, bubble=True)}",
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
-        f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
+        f" حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
         f"🔹 حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
         "",
         f"🔸 ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
-        f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
+        f" ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
         "",
         fa_date(),
     ]
     
     return "\n".join(lines)
 
-# ========== ارسال به تلگرام و بله ==========
-
 def send_to_telegram(main_text):
-    """ارسال به تلگرام با لینک مخفی + نمایش هر دو لینک در انتها"""
+    """ارسال به تلگرام با لاگ کامل"""
     if not TELEGRAM_BOT_TOKEN:
         print("⚠️ TELEGRAM_BOT_TOKEN not set")
-        return
+        return False
+    
+    print("\n" + "="*60)
+    print("📤 TELEGRAM DEBUG INFO:")
+    print("="*60)
+    print(f"Token (first 10 chars): {TELEGRAM_BOT_TOKEN[:10]}...")
+    print(f"Channel ID: {TELEGRAM_CHANNEL_ID}")
     
     url = TELEGRAM_API_URL.format(token=TELEGRAM_BOT_TOKEN)
+    print(f"URL: {url}")
     
     escaped_main = html_module.escape(main_text)
     escaped_main = escaped_main.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
@@ -299,22 +291,42 @@ def send_to_telegram(main_text):
     
     html_text = f'<a href="{CHANNEL_URL}">{escaped_main}</a>\n\n{telegram_link}\n{bale_link}'
     
+    payload = {
+        "chat_id": TELEGRAM_CHANNEL_ID, 
+        "text": html_text,
+        "parse_mode": "HTML"
+    }
+    
+    print(f"\nPayload text length: {len(html_text)} chars")
+    print(f"Parse mode: HTML")
+    print("\nSending request...")
+    
     try:
-        r = requests.post(url, json={
-            "chat_id": TELEGRAM_CHANNEL_ID, 
-            "text": html_text,
-            "parse_mode": "HTML"
-        }, timeout=15)
-        print(f"📤 Telegram Status: {r.status_code}")
+        r = requests.post(url, json=payload, timeout=15)
+        print(f"\n📊 RESPONSE STATUS: {r.status_code}")
+        print(f"📄 RESPONSE TEXT: {r.text[:500]}")
+        print(f"📄 RESPONSE JSON: {r.json()}")
+        
+        if r.status_code == 200:
+            print("✅ Telegram sent successfully!")
+            return True
+        else:
+            print(f"❌ Telegram failed with status {r.status_code}")
+            return False
+            
     except Exception as e:
-        print(f"❌ Telegram error: {e}")
+        print(f"\n❌ EXCEPTION: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def send_to_bale(main_text):
-    """ارسال به بله با هر دو لینک در انتها"""
+    """ارسال به بله"""
     if not BALE_BOT_TOKEN:
         print("⚠️ BALE_BOT_TOKEN not set")
-        return
+        return False
     
+    print("\n Sending to Bale...")
     url = BALE_API_URL.format(token=BALE_BOT_TOKEN)
     
     telegram_link = "https://t.me/nerkh_tahlil"
@@ -327,17 +339,19 @@ def send_to_bale(main_text):
             "chat_id": BALE_CHANNEL_ID, 
             "text": text
         }, timeout=15)
-        print(f"📤 Bale Status: {r.status_code}")
+        print(f" Bale Status: {r.status_code}")
+        return r.status_code == 200
     except Exception as e:
         print(f"❌ Bale error: {e}")
+        return False
 
 def main():
-    print("=" * 50)
+    print("=" * 60)
     print("🤖 Price Bot Started")
-    print("=" * 50)
+    print("=" * 60)
     
     if not is_working_hours():
-        print("⏸️ Bot stopped: Outside working hours")
+        print("️ Outside working hours")
         return
     
     print("Fetching prices...")
@@ -347,14 +361,14 @@ def main():
         print(f"❌ Error: {main_text}")
         return
     
-    print(main_text)
+    tg_success = send_to_telegram(main_text)
+    bale_success = send_to_bale(main_text)
     
-    send_to_telegram(main_text)
-    send_to_bale(main_text)
-    
-    print("=" * 50)
-    print("✅ Bot completed successfully")
-    print("=" * 50)
+    print("\n" + "="*60)
+    print("FINAL RESULT:")
+    print(f"Telegram: {'✅' if tg_success else '❌'}")
+    print(f"Bale: {'✅' if bale_success else '❌'}")
+    print("="*60)
 
 if __name__ == "__main__":
     main()
