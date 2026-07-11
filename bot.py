@@ -190,7 +190,7 @@ def build_message():
     silver_oz = fetch_silver_ounce()
     
     if not prices:
-        return " خطا در دریافت اطلاعات از سرور."
+        return "❌ خطا در دریافت اطلاعات از سرور."
     
     # ارزها
     tether     = get_price(prices, "tether")
@@ -251,8 +251,8 @@ def build_message():
         # ارزها
         f"💵 تتر:   {fmt(tether)} {fmt(chg_tether, change=True)}",
         f"💰 دلار:   {fmt(dollar)} {fmt(chg_dollar, change=True)}",
-        f" یورو:   {fmt(euro)} {fmt(chg_euro, change=True)}",
-        f" لیر ترکیه:   {fmt(lira)} {fmt(chg_lira, change=True)}",
+        f"💶 یورو:   {fmt(euro)} {fmt(chg_euro, change=True)}",
+        f"🌙 لیر ترکیه:   {fmt(lira)} {fmt(chg_lira, change=True)}",
         f"🌴 درهم امارات:   {fmt(dirham)} {fmt(chg_dirham, change=True)}",
         "",
         
@@ -275,20 +275,20 @@ def build_message():
         # حباب‌ها
         f"🔹 حباب سکه امامی:   {fmt(hbab_emami, bubble=True)}",
         f"🔹 حباب سکه بهار آزادی:   {fmt(hbab_bahar, bubble=True)}",
-        f"🔹 حباب نیم سکه:   {fmt(hbab_nim, bubble=True)}",
+        f" حباب نیم سکه:   {fmt(hbab_nim, bubble=True)}",
         f"🔹 حباب ربع سکه:   {fmt(hbab_rob, bubble=True)}",
         f"🔹 حباب سکه گرمی:   {fmt(hbab_grami, bubble=True)}",
         f"🔹 حباب آبشده:   {fmt(hbab_abshodeh, bubble=True)}",
         "",
         
         # ارزش ذاتی
-        f" ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
+        f"🔸 ارزش ذاتی یک مثقال آبشده:   {fmt(intr_abshodeh)}",
         f"🔸 ارزش سکه امامی بدون حباب:   {fmt(intr_emami)}",
         "",
         
-        # ارزهای دیجیتال
-        f"₿ بیت‌کوین:   {fmt(bitcoin, decimal=True)} {fmt(chg_bitcoin, change=True)}",
-        f"Ξ اتریوم:   {fmt(ethereum, decimal=True)} {fmt(chg_ethereum, change=True)}",
+        # ارزهای دیجیتال (با راست‌چین کردن اتریوم)
+        f" بیت‌کوین:   {fmt(bitcoin, decimal=True)} {fmt(chg_bitcoin, change=True)}",
+        f"Ξ اتریوم:   {fmt(ethereum, decimal=True)} {fmt(chg_ethereum, change=True)}\u200f",
         "",
         
         # تاریخ
@@ -318,7 +318,7 @@ def send_to_telegram(main_text):
             "text": html_text,
             "parse_mode": "HTML"
         }, timeout=15)
-        print(f" Telegram Status: {r.status_code}")
+        print(f"📤 Telegram Status: {r.status_code}")
         return r.status_code == 200
     except Exception as e:
         print(f" Telegram error: {e}")
@@ -326,7 +326,7 @@ def send_to_telegram(main_text):
 
 def send_to_bale(main_text):
     if not BALE_BOT_TOKEN:
-        print("⚠️ BALE_BOT_TOKEN not set")
+        print("️ BALE_BOT_TOKEN not set")
         return False
     
     url = BALE_API_URL.format(token=BALE_BOT_TOKEN)
@@ -353,14 +353,14 @@ def main():
     print("=" * 60)
     
     if not is_working_hours():
-        print("️ Outside working hours")
+        print("⏸️ Outside working hours")
         return
     
     print("Fetching prices...")
     main_text = build_message()
     
     if not main_text or main_text.startswith("❌"):
-        print(f" Error: {main_text}")
+        print(f"❌ Error: {main_text}")
         return
     
     tg_success = send_to_telegram(main_text)
